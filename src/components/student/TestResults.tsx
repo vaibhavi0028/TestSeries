@@ -9,17 +9,26 @@ import { questions } from "@/data/mockData"
 
 interface TestResultsProps {
   testId: string
-  userId: string
 }
 
-export default function TestResults({ testId, userId }: TestResultsProps) {
+export default function TestResults({ testId }: TestResultsProps) {
   const router = useRouter()
   const [results, setResults] = useState<TestResult | null>(null)
   const [test, setTest] = useState<TestConfig | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    const storedResults = localStorage.getItem(`test_result_${testId}_${userId}`)
+    const userStr = localStorage.getItem("user")
+    if (!userStr) {
+      router.push("/login")
+      return
+    }
+
+    const parsedUser = JSON.parse(userStr)
+    setUserId(parsedUser.id)
+
+    const storedResults = localStorage.getItem(`test_result_${testId}_${parsedUser.id}`)
     if (storedResults) {
       setResults(JSON.parse(storedResults))
     }
@@ -34,7 +43,7 @@ export default function TestResults({ testId, userId }: TestResultsProps) {
     }
 
     setLoading(false)
-  }, [testId, userId])
+  }, [testId, router])
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading results...</div>
