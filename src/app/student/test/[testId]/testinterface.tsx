@@ -26,20 +26,38 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
   const questionTimerRef = useRef<NodeJS.Timeout | null>(null)
   const questionStartTimeRef = useRef<number>(Date.now())
   const visibilityWarningCount = useRef<number>(0)
+  
+  // Store test config in refs to avoid dependency changes
+  const testConfigRef = useRef({
+    id: test.id,
+    duration: test.duration,
+    questionIds: test.questionIds
+  })
+  const userIdRef = useRef(userId)
+
+  // Update refs when props change
+  useEffect(() => {
+    testConfigRef.current = {
+      id: test.id,
+      duration: test.duration,
+      questionIds: test.questionIds
+    }
+    userIdRef.current = userId
+  }, [test, userId])
 
   const submitTest = useCallback(() => {
     if (!session) return
 
     const results = {
-      testId: test.id,
-      userId,
+      testId: testConfigRef.current.id,
+      userId: userIdRef.current,
       score: 0,
-      totalQuestions: test.questionIds.length,
+      totalQuestions: testConfigRef.current.questionIds.length,
       correctAnswers: 0,
       incorrectAnswers: 0,
       unattempted: 0,
       markedForReview: 0,
-      timeTaken: test.duration - session.remainingTime,
+      timeTaken: testConfigRef.current.duration - session.remainingTime,
       submittedAt: Date.now(),
       questionStats: [] as { questionId: number; timeSpent: number; isCorrect: boolean; attempted: boolean }[],
     }
@@ -75,7 +93,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
       })
     })
 
-    localStorage.setItem(`test_result_${test.id}_${userId}`, JSON.stringify(results))
+    localStorage.setItem(`test_result_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(results))
 
     setSession((prev) => {
       if (!prev) return prev
@@ -86,16 +104,16 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
         endTime: Date.now(),
       }
 
-      localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+      localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
 
       return updatedSession
     })
 
-    router.push(`/student/results/${test.id}`)
-  }, [session, test.id, test.duration, test.questionIds.length, userId, router])
+    router.push(`/student/results/${testConfigRef.current.id}`)
+  }, [session, router])
 
   useEffect(() => {
-    const storedSession = localStorage.getItem(`test_session_${test.id}_${userId}`)
+    const storedSession = localStorage.getItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`)
 
     if (storedSession) {
       const parsedSession: TestSession = JSON.parse(storedSession)
@@ -109,17 +127,17 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
     } else {
       const newSession: TestSession = {
         id: generateSessionId(),
-        userId,
-        testId: test.id,
+        userId: userIdRef.current,
+        testId: testConfigRef.current.id,
         startTime: Date.now(),
-        remainingTime: test.duration,
-        currentQuestionId: test.questionIds[0],
+        remainingTime: testConfigRef.current.duration,
+        currentQuestionId: testConfigRef.current.questionIds[0],
         answers: {},
         tabSwitchCount: 0,
         completed: false,
       }
 
-      test.questionIds.forEach((qId) => {
+      testConfigRef.current.questionIds.forEach((qId) => {
         newSession.answers[qId] = {
           questionId: qId,
           selectedOption: null,
@@ -131,7 +149,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
 
       setSession(newSession)
 
-      const firstQuestion = questions.find((q) => q.id === test.questionIds[0])
+      const firstQuestion = questions.find((q) => q.id === testConfigRef.current.questionIds[0])
       if (firstQuestion) {
         setCurrentQuestion(firstQuestion)
         setCurrentSubject(firstQuestion.subject)
@@ -139,7 +157,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
     }
 
     setLoading(false)
-  }, [test, userId])
+  }, [testConfigRef, userIdRef])
 
   useEffect(() => {
     if (!session) return
@@ -161,7 +179,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
           remainingTime: newRemainingTime,
         }
 
-        localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+        localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
 
         return updatedSession
       })
@@ -170,7 +188,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [session, test.id, userId, submitTest])
+  }, [session, submitTest])
 
   useEffect(() => {
     if (!session || !currentQuestion) return
@@ -196,7 +214,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
         }
 
         if (timeSpent % 5 === 0) {
-          localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+          localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
         }
 
         return updatedSession
@@ -206,7 +224,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
     return () => {
       if (questionTimerRef.current) clearInterval(questionTimerRef.current)
     }
-  }, [currentQuestion, session, test.id, userId])
+  }, [currentQuestion, session, submitTest])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -226,7 +244,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
             tabSwitchCount: prev.tabSwitchCount + 1,
           }
 
-          localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+          localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
 
           return updatedSession
         })
@@ -238,7 +256,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [test.id, userId, submitTest])
+  }, [submitTest])
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -293,7 +311,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
         answers: updatedAnswers,
       }
 
-      localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+      localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
 
       return updatedSession
     })
@@ -302,9 +320,9 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
   const goToNextQuestion = () => {
     if (!session || !currentQuestion) return
 
-    const currentIndex = test.questionIds.indexOf(currentQuestion.id)
-    if (currentIndex < test.questionIds.length - 1) {
-      const nextQuestionId = test.questionIds[currentIndex + 1]
+    const currentIndex = testConfigRef.current.questionIds.indexOf(currentQuestion.id)
+    if (currentIndex < testConfigRef.current.questionIds.length - 1) {
+      const nextQuestionId = testConfigRef.current.questionIds[currentIndex + 1]
       navigateToQuestion(nextQuestionId)
     }
   }
@@ -312,9 +330,9 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
   const goToPrevQuestion = () => {
     if (!session || !currentQuestion) return
 
-    const currentIndex = test.questionIds.indexOf(currentQuestion.id)
+    const currentIndex = testConfigRef.current.questionIds.indexOf(currentQuestion.id)
     if (currentIndex > 0) {
-      const prevQuestionId = test.questionIds[currentIndex - 1]
+      const prevQuestionId = testConfigRef.current.questionIds[currentIndex - 1]
       navigateToQuestion(prevQuestionId)
     }
   }
@@ -333,7 +351,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
         currentQuestionId: questionId,
       }
 
-      localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+      localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
 
       return updatedSession
     })
@@ -360,7 +378,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
         answers: updatedAnswers,
       }
 
-      localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+      localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
 
       return updatedSession
     })
@@ -385,7 +403,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
         answers: updatedAnswers,
       }
 
-      localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+      localStorage.setItem(`test_session_${testConfigRef.current.id}_${userIdRef.current}`, JSON.stringify(updatedSession))
 
       return updatedSession
     })
@@ -394,7 +412,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
   const filterQuestionsBySubject = (subject: string) => {
     setCurrentSubject(subject)
 
-    const firstQuestionOfSubject = questions.find((q) => q.subject === subject && test.questionIds.includes(q.id))
+    const firstQuestionOfSubject = questions.find((q) => q.subject === subject && testConfigRef.current.questionIds.includes(q.id))
     if (firstQuestionOfSubject) {
       navigateToQuestion(firstQuestionOfSubject.id)
     }
@@ -475,7 +493,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
         <div className="w-3/4 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Question {test.questionIds.indexOf(currentQuestion.id) + 1}:</h2>
+              <h2 className="text-xl font-semibold">Question {testConfigRef.current.questionIds.indexOf(currentQuestion.id) + 1}:</h2>
               <Button variant="outline" size="sm">
                 <span className="text-blue-600">Report Issue</span>
               </Button>
@@ -545,14 +563,14 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
             <Button
               variant="outline"
               onClick={goToPrevQuestion}
-              disabled={test.questionIds.indexOf(currentQuestion.id) === 0}
+              disabled={testConfigRef.current.questionIds.indexOf(currentQuestion.id) === 0}
             >
               « Back
             </Button>
             <Button
               variant="outline"
               onClick={goToNextQuestion}
-              disabled={test.questionIds.indexOf(currentQuestion.id) === test.questionIds.length - 1}
+              disabled={testConfigRef.current.questionIds.indexOf(currentQuestion.id) === testConfigRef.current.questionIds.length - 1}
             >
               Next »
             </Button>
@@ -597,7 +615,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
           </div>
 
           <div className="grid grid-cols-5 gap-2">
-            {test.questionIds.map((qId, index) => {
+            {testConfigRef.current.questionIds.map((qId, index) => {
               const status = getQuestionStatus(qId, session.answers)
               let bgColor = "bg-gray-300"
 

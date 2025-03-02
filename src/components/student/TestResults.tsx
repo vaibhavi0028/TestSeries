@@ -16,7 +16,6 @@ export default function TestResults({ testId }: TestResultsProps) {
   const [results, setResults] = useState<TestResult | null>(null)
   const [test, setTest] = useState<TestConfig | null>(null)
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const userStr = localStorage.getItem("user")
@@ -26,9 +25,9 @@ export default function TestResults({ testId }: TestResultsProps) {
     }
 
     const parsedUser = JSON.parse(userStr)
-    setUserId(parsedUser.id)
+    const userId = parsedUser.id
 
-    const storedResults = localStorage.getItem(`test_result_${testId}_${parsedUser.id}`)
+    const storedResults = localStorage.getItem(`test_result_${testId}_${userId}`)
     if (storedResults) {
       setResults(JSON.parse(storedResults))
     }
