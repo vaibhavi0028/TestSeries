@@ -92,7 +92,7 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
     })
 
     router.push(`/student/results/${test.id}`)
-  }, [session, test.id, userId, router])
+  }, [session, test.id, test.duration, test.questionIds.length, userId, router])
 
   useEffect(() => {
     const storedSession = localStorage.getItem(`test_session_${test.id}_${userId}`)

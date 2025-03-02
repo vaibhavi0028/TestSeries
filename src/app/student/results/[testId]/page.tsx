@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation"
 import type { QuestionType, TestConfig, TestResult, User } from "@/types"
 import { Button } from "@/components/ui/button"
 
-export default function TestResults({ params }: { params: { testId: string } }) {
+interface PageProps {
+  params: {
+    testId: string;
+  };
+}
+
+export default function ResultsPage({ params }: PageProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [test, setTest] = useState<TestConfig | null>(null)
