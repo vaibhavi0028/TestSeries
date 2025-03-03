@@ -18,39 +18,30 @@ export default function TestResults({ testId }: TestResultsProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        setLoading(true)
-        const userStr = localStorage.getItem("user")
-        if (!userStr) {
-          router.push("/login")
-          return
-        }
+    const userStr = localStorage.getItem("user")
+    if (!userStr) {
+      router.push("/login")
+      return
+    }
 
-        const parsedUser = JSON.parse(userStr)
-        const userId = parsedUser.id
+    const parsedUser = JSON.parse(userStr)
+    const userId = parsedUser.id
 
-        const storedResults = localStorage.getItem(`test_result_${testId}_${userId}`)
-        if (storedResults) {
-          setResults(JSON.parse(storedResults))
-        }
+    const storedResults = localStorage.getItem(`test_result_${testId}_${userId}`)
+    if (storedResults) {
+      setResults(JSON.parse(storedResults))
+    }
 
-        const storedTests = localStorage.getItem("tests")
-        if (storedTests) {
-          const tests: TestConfig[] = JSON.parse(storedTests)
-          const foundTest = tests.find((t) => t.id === testId)
-          if (foundTest) {
-            setTest(foundTest)
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching results:', error)
-      } finally {
-        setLoading(false)
+    const storedTests = localStorage.getItem("tests")
+    if (storedTests) {
+      const tests: TestConfig[] = JSON.parse(storedTests)
+      const foundTest = tests.find((t) => t.id === testId)
+      if (foundTest) {
+        setTest(foundTest)
       }
     }
 
-    fetchResults()
+    setLoading(false)
   }, [testId, router])
 
   if (loading) {

@@ -1,16 +1,28 @@
-import TestResults from '@/components/student/TestResults'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Suspense } from 'react'
+import ResultsContent from '@/components/student/TestResults'
 import { Metadata } from 'next'
 
-export async function generateMetadata({ params }: { params: { testId: string } }) {
+export interface PageProps {
+  params: Promise<{ testId: string }>
+  searchParams?: any
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const resolvedParams = await params
   return {
-    title: `Test Results - ${params.testId}`,
+    title: `Test Results - ${resolvedParams.testId}`,
   }
 }
 
-export default function Page({
-  params,
-}: {
-  params: { testId: string }
-}) {
-  return <TestResults testId={params.testId} />
+export default async function ResultsPage(props: PageProps) {
+  const resolvedParams = await props.params
+  const testId = resolvedParams.testId
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResultsContent testId={testId} />
+    </Suspense>
+  )
 } 
