@@ -28,6 +28,73 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
   const questionStartTimeRef = useRef<number>(Date.now())
   const visibilityWarningCount = useRef<number>(0)
 
+  const submitTest = useCallback(() => {
+    if (!session) return
+
+    const results = {
+      testId: test.id,
+      userId: userId,
+      score: 0,
+      totalQuestions: test.questionIds.length,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      unattempted: 0,
+      markedForReview: 0,
+      timeTaken: test.duration - session.remainingTime,
+      submittedAt: Date.now(),
+      questionStats: [] as { questionId: number; timeSpent: number; isCorrect: boolean; attempted: boolean }[],
+    }
+
+    Object.values(session.answers).forEach((answer) => {
+      const question = questions.find((q) => q.id === answer.questionId)
+      if (!question) return
+
+      const isAttempted = answer.selectedOption !== null
+      const isCorrect = isAttempted && answer.selectedOption === question.correctAnswer
+
+      if (isAttempted) {
+        if (isCorrect) {
+          results.correctAnswers += 1
+          results.score += 4
+        } else {
+          results.incorrectAnswers += 1
+          results.score -= 1
+        }
+      } else {
+        results.unattempted += 1
+      }
+
+      if (answer.markedForReview) {
+        results.markedForReview += 1
+      }
+
+      results.questionStats.push({
+        questionId: answer.questionId,
+        timeSpent: answer.timeSpent,
+        isCorrect: isCorrect,
+        attempted: isAttempted,
+      })
+    })
+
+    localStorage.setItem(`test_result_${test.id}_${userId}`, JSON.stringify(results))
+
+    setSession((prev) => {
+      if (!prev) return prev
+
+      const updatedSession = {
+        ...prev,
+        completed: true,
+        endTime: Date.now(),
+      }
+
+      localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession))
+
+      return updatedSession
+    })
+
+    router.push(`/student/results/${test.id}`)
+  }, [session, test.id, test.duration, test.questionIds.length, userId, router])
+
   useEffect(() => {
     const storedSession = localStorage.getItem(`test_session_${test.id}_${userId}`)
 
@@ -324,73 +391,6 @@ export default function TestInterface({ test, userId }: TestInterfaceProps) {
       return updatedSession
     })
   }
-
-  const submitTest = useCallback(() => {
-    if (!session) return;
-
-    const results = {
-        testId: test.id,
-        userId,
-        score: 0,
-        totalQuestions: test.questionIds.length,
-        correctAnswers: 0,
-        incorrectAnswers: 0,
-        unattempted: 0,
-        markedForReview: 0,
-        timeTaken: test.duration - session.remainingTime,
-        submittedAt: Date.now(),
-        questionStats: [] as { questionId: number; timeSpent: number; isCorrect: boolean; attempted: boolean }[],
-    };
-
-    Object.values(session.answers).forEach((answer) => {
-        const question = questions.find((q) => q.id === answer.questionId);
-        if (!question) return;
-
-        const isAttempted = answer.selectedOption !== null;
-        const isCorrect = isAttempted && answer.selectedOption === question.correctAnswer;
-
-        if (isAttempted) {
-            if (isCorrect) {
-                results.correctAnswers += 1;
-                results.score += 4;
-            } else {
-                results.incorrectAnswers += 1;
-                results.score -= 1;
-            }
-        } else {
-            results.unattempted += 1;
-        }
-
-        if (answer.markedForReview) {
-            results.markedForReview += 1;
-        }
-
-        results.questionStats.push({
-            questionId: answer.questionId,
-            timeSpent: answer.timeSpent,
-            isCorrect: isCorrect,
-            attempted: isAttempted,
-        });
-    });
-
-    localStorage.setItem(`test_result_${test.id}_${userId}`, JSON.stringify(results));
-
-    setSession((prev) => {
-        if (!prev) return prev;
-
-        const updatedSession = {
-            ...prev,
-            completed: true,
-            endTime: Date.now(),
-        };
-
-        localStorage.setItem(`test_session_${test.id}_${userId}`, JSON.stringify(updatedSession));
-
-        return updatedSession;
-    });
-
-    router.push(`/student/results/${test.id}`);
-}, [session, test, userId, setSession, router]); 
 
   const filterQuestionsBySubject = (subject: string) => {
     setCurrentSubject(subject)

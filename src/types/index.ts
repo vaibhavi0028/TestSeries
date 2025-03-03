@@ -2,7 +2,7 @@ export type Subject = "Physics" | "Chemistry" | "Mathematics"
 
 export type QuestionType = {
   id: number
-  subject: string
+  subject: Subject
   text: string
   options: string[]
   correctAnswer: number
@@ -36,7 +36,7 @@ export type TestConfig = {
   duration: number
   totalMarks: number
   passingMarks: number
-  subjects: string[]
+  subjects: Subject[]
   questionIds: number[]
   scheduledFor: number
   scheduledBy: string
