@@ -1,15 +1,18 @@
-import { Suspense } from 'react'
-import ResultsContent from '@/components/student/TestResults'
+import { Metadata } from 'next'
+import ResultsPage from '@/components/student/ResultsPage'
 
-type Props = {
-  params: { testId: string }
-  searchParams: { [key: string]: string | string[] | undefined }
+interface Props {
+  params: {
+    testId: string
+  }
 }
 
-export default function ResultsPage({ params }: Props) {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ResultsContent testId={params.testId} />
-    </Suspense>
-  )
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return {
+    title: `Test Results - ${params.testId}`,
+  }
+}
+
+export default function Page({ params }: Props) {
+  return <ResultsPage testId={params.testId} />
 } 
